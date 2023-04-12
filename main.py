@@ -83,16 +83,21 @@ def flask():
             <ul></ul>
             <form action="/IPProblematicas" method="POST">
                 <input type="number" id="numero2" name="numero2">
+                
                 <button type="submit">ENVIAR</button>
             </form>
             <ul></ul>
             <form action="/DispositivosPeligrosos" method="POST">
                 <input type="number" id="numero3" name="numero3">
+                <input type="checkbox" name="masPeligrosos">
+                <input type="checkbox" name="menosPeligrosos">
                 <button type="submit">ENVIAR</button>
             </form>
+            <ul></ul>
         '''
     @app.route('/DispositivosProblematicos', methods=["POST"])
     def DispositivosProblematicos():
+
         numero = int(request.form['numero'])
         con = sqlite3.connect("bd1.db")
         curs = con.cursor()
@@ -125,19 +130,31 @@ def flask():
 
     @app.route('/DispositivosPeligrosos', methods=["POST"])
     def dispositivosPeligrosos():
+
         numero = int(request.form['numero3'])
         con = sqlite3.connect("bd1.db")
         curs = con.cursor()
         curs.execute(
             "SELECT dispositivos.id, ROUND(CAST(analisis.servicios_inseguros AS FLOAT)/ analisis.servicios * 100, 2) AS porcentaje FROM dispositivos INNER JOIN analisis ON analisis.id=dispositivos.analisis WHERE analisis.servicios>0 and porcentaje>33 ORDER BY porcentaje DESC LIMIT {}".format(
                 numero))
-
         result = curs.fetchall()
-        html = f'<h1>Dispositivos más preligrosos</h1>'
+        html = f'<h1>Dispositivos más peligrosos</h1>'
         html += f'<ul>'
         for a in result:
             html += f'<li>{a[0]} {a[1]}</li>'
         html += f'</ul>'
+        if request.form.get('masPeligrosos'):
+            curs.execute("SELECT dispositivos.id, dispositivos.ip, dispositivos.localizacion, dispositivos.responsable, analisis.vulnerabilidades_detectadas, ROUND(CAST(analisis.servicios_inseguros AS FLOAT)/ analisis.servicios * 100, 2) AS porcentaje FROM dispositivos INNER JOIN analisis ON analisis.id=dispositivos.analisis WHERE analisis.servicios>0 and porcentaje>33 ORDER BY porcentaje DESC LIMIT {}".format(numero))
+            result = curs.fetchall()
+            html += f'<h1>INFO MÁS PELIGROSOS</h1>'
+            for a in result:
+                html += f'<li>{a[0]} {a[1]} {a[2]} {a[3]} {a[4]}'
+        if request.form.get('menosPeligrosos'):
+            curs.execute("SELECT dispositivos.id, dispositivos.ip, dispositivos.localizacion, dispositivos.responsable, analisis.vulnerabilidades_detectadas, ROUND(CAST(analisis.servicios_inseguros AS FLOAT)/ analisis.servicios * 100, 2) AS porcentaje FROM dispositivos INNER JOIN analisis ON analisis.id=dispositivos.analisis WHERE analisis.servicios>0 and porcentaje<33 ORDER BY porcentaje DESC LIMIT {}".format(numero))
+            result = curs.fetchall()
+            html += f'<h1>INFO MENOS PELIGROSOS</h1>'
+            for a in result:
+                html += f'<li>{a[0]} {a[1]} {a[2]} {a[3]} {a[4]}'
         con.close()
         return html
 
