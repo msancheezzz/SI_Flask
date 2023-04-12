@@ -2,8 +2,9 @@ import json
 import sqlite3
 import pandas as pd
 import matplotlib as mp
-from flask import Flask
+from flask import Flask, jsonify
 from flask import request
+import requests
 
 ###### CONEXIONES Y FICHEROS #########
 data = pd.read_csv("Data/alerts.csv")
@@ -93,6 +94,7 @@ def flask():
                 <input type="checkbox" name="menosPeligrosos">
                 <button type="submit">ENVIAR</button>
             </form>
+            <a href="/CVE">TOP 10 CVEs</a>
             <ul></ul>
         '''
     @app.route('/DispositivosProblematicos', methods=["POST"])
@@ -157,6 +159,14 @@ def flask():
                 html += f'<li>{a[0]} {a[1]} {a[2]} {a[3]} {a[4]}'
         con.close()
         return html
+
+    @app.route("/CVE")
+    def CVEs():
+        respuesta = requests.get("https://cve.circl.lu/api/last")
+        respuesta = respuesta.json()
+        primeras = respuesta[:10]
+        return primeras
+
 
     app.run(debug=True)
 
