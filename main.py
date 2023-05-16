@@ -125,6 +125,7 @@ def flask():
             <form action="/DispositivosPeligrosos" method="POST">
                 <input type="number" id="numero3" name="numero3">
                 <input type="checkbox" name="menosPeligrosos">
+                <label for="menosPeligroso">Marca para menos peligrosos</label>
                 <button type="submit">ENVIAR</button>
             </form>
             <a href="/CVE">TOP 10 CVEs</a>
@@ -141,7 +142,7 @@ def flask():
         html = f'<h1>Dispositivos más problematicos</h1>'
         html += f'<ul>'
         for a in result:
-            html += f'<li>{a[0]} {a[1]}</li>'
+            html += f'<ul><li>VULNERABILIDADES: {a[0]} <li>ID: {a[1]}</ul>'
         html += f'</ul>'
         con.close()
         return html
@@ -158,7 +159,7 @@ def flask():
         html = f'<h1>IPs más problematicas</h1>'
         html += f'<ul>'
         for a in result:
-            html += f'<li>{a[0]} {a[1]}</li>'
+            html += f'<ul><li>IP: {a[0]}</ul>'
         html += f'</ul>'
         con.close()
         return html
@@ -175,7 +176,7 @@ def flask():
             result = curs.fetchall()
             html = f'<h1>INFO MENOS PELIGROSOS</h1>'
             for a in result:
-                html += f'<li>{a[0]} {a[1]} {a[2]} {a[3]} {a[4]}'
+                html += f'<ul><li>ID: {a[0]} <li>IP:{a[1]} <li>LOCALIZACIÓN: {a[2]} <li>USUARIO:{a[3]} <li>VULNERABILIDADES DETECTADAS: {a[4]}</ul>'
         else:
             curs.execute("SELECT dispositivos.id, dispositivos.ip, dispositivos.localizacion, dispositivos.responsable,"
                          " analisis.vulnerabilidades_detectadas, "
@@ -185,16 +186,20 @@ def flask():
             result = curs.fetchall()
             html = f'<h1>INFO MÁS PELIGROSOS</h1>'
             for a in result:
-                html += f'<li>{a[0]} {a[1]} {a[2]} {a[3]} {a[4]}'
+                html += f'<ul><li>ID: {a[0]} <li>IP:{a[1]} <li>LOCALIZACIÓN: {a[2]} <li>USUARIO:{a[3]} <li>VULNERABILIDADES DETECTADAS: {a[4]}</ul>'
         con.close()
         return html
 
     @app.route("/CVE")
     def CVEs():
+        html = f'<h1>TOP 10 VULNERABILIDADES DEL CVE</h1>'
         respuesta = requests.get("https://cve.circl.lu/api/last")
         respuesta = respuesta.json()
         primeras = respuesta[:10]
-        return primeras
+        for row in primeras:
+            html += f'<ul><li>ID: {row["id"]} <li>SUMMARY: {row["summary"]} <li>PUBLISHED: {row["Published"]}</ul>'
+
+        return html
 
     @app.route("/login")
     def login():
