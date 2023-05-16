@@ -1,8 +1,10 @@
 import json
 import sqlite3
+
+import bcrypt as bcrypt
 import pandas as pd
 import matplotlib as mp
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template
 from flask import request
 import requests
 
@@ -49,7 +51,35 @@ cursor.execute("""create table if not exists analisis(
                                       primary key(puertos_abiertos, n_puertos_abiertos, servicios, servicios_inseguros, vulnerabilidades_detectadas)
                                 )""")
 
-############## RELLENAR TABLAS #############################3
+cursor.execute("""create table if not exists users_login(
+                                      id integer primary key,
+                                      name text unique,
+                                      password_hash integer, 
+                                      salt text
+                                )""")
+
+############## RELLENAR TABLAS #############################
+
+admin = "soyadmin"
+paco = "soypaco"
+luis = "soyluis"
+admiin = "soyadmiin"
+
+salt = bcrypt.gensalt()
+
+admin_pass = bcrypt.hashpw(admin.encode('utf-8'), salt)
+conexion.execute("INSERT OR IGNORE INTO users_login (name, password_hash, salt) VALUES(?,?,?)", ("admin", admin_pass, salt))
+salt = bcrypt.gensalt()
+paco_pass =bcrypt.hashpw(paco.encode('utf-8'), salt)
+conexion.execute("INSERT OR IGNORE INTO users_login (name, password_hash, salt) VALUES(?,?,?)", ("Paco Garcia", paco_pass, salt))
+salt = bcrypt.gensalt()
+luis_pass = bcrypt.hashpw(luis.encode('utf-8'), salt)
+conexion.execute("INSERT OR IGNORE INTO users_login (name, password_hash, salt) VALUES(?,?,?)", ("Luis Sanchez", luis_pass, salt))
+salt = bcrypt.gensalt()
+admiin_pass = bcrypt.hashpw(admiin.encode('utf-8'), salt)
+
+conexion.execute("INSERT OR IGNORE INTO users_login (name, password_hash, salt) VALUES(?,?,?)", ("admiin", admiin_pass, salt))
+
 
 analisis_id = 0
 for a in devices:
@@ -71,16 +101,19 @@ data.to_sql("articulos", conexion, if_exists="replace", index=False)
 conexion.close()
 
 def flask():
-    app = Flask(__name__)
+    app = Flask(_name_)
 
     @app.route('/')
     def index():
         return '''
-            <h1>FUFA</h1>
+            <h1>CMI</h1>
+            <a href="/login">LOGIN</a>
+            <p>Dispositivos Problemáticos</p>
             <form action="/DispositivosProblematicos" method="POST">
                 <input type="number" id="numero" name="numero">
                 <button type="submit">ENVIAR</button>
             </form>
+            <p>IPs Problemáticas</p>
             <ul></ul>
             <form action="/IPProblematicas" method="POST">
                 <input type="number" id="numero2" name="numero2">
@@ -88,9 +121,9 @@ def flask():
                 <button type="submit">ENVIAR</button>
             </form>
             <ul></ul>
+            <p>Dispositivos Peligrosos</p>
             <form action="/DispositivosPeligrosos" method="POST">
                 <input type="number" id="numero3" name="numero3">
-                <input type="checkbox" name="masPeligrosos">
                 <input type="checkbox" name="menosPeligrosos">
                 <button type="submit">ENVIAR</button>
             </form>
@@ -136,25 +169,21 @@ def flask():
         numero = int(request.form['numero3'])
         con = sqlite3.connect("bd1.db")
         curs = con.cursor()
-        curs.execute(
-            "SELECT dispositivos.id, ROUND(CAST(analisis.servicios_inseguros AS FLOAT)/ analisis.servicios * 100, 2) AS porcentaje FROM dispositivos INNER JOIN analisis ON analisis.id=dispositivos.analisis WHERE analisis.servicios>0 and porcentaje>33 ORDER BY porcentaje DESC LIMIT {}".format(
-                numero))
-        result = curs.fetchall()
-        html = f'<h1>Dispositivos más peligrosos</h1>'
-        html += f'<ul>'
-        for a in result:
-            html += f'<li>{a[0]} {a[1]}</li>'
-        html += f'</ul>'
-        if request.form.get('masPeligrosos'):
-            curs.execute("SELECT dispositivos.id, dispositivos.ip, dispositivos.localizacion, dispositivos.responsable, analisis.vulnerabilidades_detectadas, ROUND(CAST(analisis.servicios_inseguros AS FLOAT)/ analisis.servicios * 100, 2) AS porcentaje FROM dispositivos INNER JOIN analisis ON analisis.id=dispositivos.analisis WHERE analisis.servicios>0 and porcentaje>33 ORDER BY porcentaje DESC LIMIT {}".format(numero))
-            result = curs.fetchall()
-            html += f'<h1>INFO MÁS PELIGROSOS</h1>'
-            for a in result:
-                html += f'<li>{a[0]} {a[1]} {a[2]} {a[3]} {a[4]}'
+
         if request.form.get('menosPeligrosos'):
             curs.execute("SELECT dispositivos.id, dispositivos.ip, dispositivos.localizacion, dispositivos.responsable, analisis.vulnerabilidades_detectadas, ROUND(CAST(analisis.servicios_inseguros AS FLOAT)/ analisis.servicios * 100, 2) AS porcentaje FROM dispositivos INNER JOIN analisis ON analisis.id=dispositivos.analisis WHERE analisis.servicios>0 and porcentaje<33 ORDER BY porcentaje DESC LIMIT {}".format(numero))
             result = curs.fetchall()
-            html += f'<h1>INFO MENOS PELIGROSOS</h1>'
+            html = f'<h1>INFO MENOS PELIGROSOS</h1>'
+            for a in result:
+                html += f'<li>{a[0]} {a[1]} {a[2]} {a[3]} {a[4]}'
+        else:
+            curs.execute("SELECT dispositivos.id, dispositivos.ip, dispositivos.localizacion, dispositivos.responsable,"
+                         " analisis.vulnerabilidades_detectadas, "
+                         "ROUND(CAST(analisis.servicios_inseguros AS FLOAT)/ analisis.servicios * 100, 2) AS porcentaje"
+                         " FROM dispositivos INNER JOIN analisis ON analisis.id=dispositivos.analisis WHERE analisis.servicios>0"
+                         " and porcentaje>33 ORDER BY porcentaje DESC LIMIT {}".format(numero))
+            result = curs.fetchall()
+            html = f'<h1>INFO MÁS PELIGROSOS</h1>'
             for a in result:
                 html += f'<li>{a[0]} {a[1]} {a[2]} {a[3]} {a[4]}'
         con.close()
@@ -166,6 +195,33 @@ def flask():
         respuesta = respuesta.json()
         primeras = respuesta[:10]
         return primeras
+
+    @app.route("/login")
+    def login():
+        return render_template('login.html')
+
+    @app.route("/urInfo", methods=["POST"])
+    def getUrInfo():
+        name = request.form['username']
+        password = request.form['password']
+        con = sqlite3.connect("bd1.db")
+        curs = con.cursor()
+        curs.execute("SELECT * from users_login WHERE name=?", (name,))
+        row = curs.fetchone()
+        if row:
+            if row[2] == bcrypt.hashpw(password.encode('utf-8'), row[3]):
+                html = f'<h1>BIENVENIDO {row[1]}</h1>'
+                curs.execute(
+                    "SELECT * FROM articulos INNER JOIN dispositivos ON dispositivos.ip=articulos.origen OR dispositivos.ip=articulos.destino WHERE dispositivos.responsable=? LIMIT 200",
+                    (name,))
+                result = curs.fetchall()
+                for a in result:
+                    html += f'<li>HORA:{a[0]} SID:{a[1]} CLASIFICACIÓN:{a[2]} PRIORIDAD:{a[3]} PROTOCOLO:{a[4]} ORIGEN:{a[5]} DESTINO:{a[6]} PUERTO:{a[7]}</li>'
+                return html
+            else:
+                return "CONTRASEÑA O USUARIO INCORRECTO"
+        else:
+            return "CONTRASEÑA O USUARIO INCORRECTO"
 
 
     app.run(debug=True)
