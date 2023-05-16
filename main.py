@@ -60,10 +60,10 @@ cursor.execute("""create table if not exists users_login(
 
 ############## RELLENAR TABLAS #############################
 
-admin = "soyadmin"
-paco = "soypaco"
-luis = "soyluis"
-admiin = "soyadmiin"
+admin = "soyadmin" ## Contraseña admin
+paco = "soypaco" ## Contraseña Paco
+luis = "soyluis" ## Contraseña Luis
+admiin = "soyadmiin" ## Contraseña admiin
 
 salt = bcrypt.gensalt()
 
@@ -217,11 +217,12 @@ def flask():
             if row[2] == bcrypt.hashpw(password.encode('utf-8'), row[3]):
                 html = f'<h1>BIENVENIDO {row[1]}</h1>'
                 curs.execute(
-                    "SELECT * FROM articulos INNER JOIN dispositivos ON dispositivos.ip=articulos.origen OR dispositivos.ip=articulos.destino WHERE dispositivos.responsable=? LIMIT 200",
+                    "SELECT * FROM articulos INNER JOIN dispositivos ON dispositivos.ip=articulos.origen OR dispositivos.ip=articulos.destino "
+                    "WHERE dispositivos.responsable=? LIMIT 200",
                     (name,))
                 result = curs.fetchall()
                 for a in result:
-                    html += f'<li>HORA:{a[0]} SID:{a[1]} CLASIFICACIÓN:{a[2]} PRIORIDAD:{a[3]} PROTOCOLO:{a[4]} ORIGEN:{a[5]} DESTINO:{a[6]} PUERTO:{a[7]}</li>'
+                    html += f'<ul><li>HORA:{a[0]} <li>SID:{a[1]} <li>CLASIFICACIÓN:{a[2]} <li>PRIORIDAD:{a[3]} <li>PROTOCOLO:{a[4]} <li>ORIGEN:{a[5]} <li>DESTINO:{a[6]} <li>PUERTO:{a[7]}</ul>'
                 return html
             else:
                 return "CONTRASEÑA O USUARIO INCORRECTO"
